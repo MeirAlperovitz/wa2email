@@ -1,0 +1,84 @@
+require('dotenv').config();
+const express = require('express');
+const nodemailer = require('nodemailer');
+
+const app = express();
+app.use(express.json());
+
+// הגדרת Nodemailer לשליחת מיילים
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
+
+// דף בדיקה ראשי
+app.get('/', (req, res) => {
+    res.send('WhatsApp to Email Server is running!');
+});
+
+// קבלת הודעות נכנסות מ-Green API
+app.post('/webhook', async (req, res) => {
+    try {
+        const body = req.body;
+
+        // בדיקה שהאירוע הוא הודעה נכנסת
+        if (body.typeWebhook === 'incomingMessageReceived') {
+            const messageData = body.messageData;
+            const senderData = body.senderData;
+
+            const senderName = senderData.senderName || senderData.sender;
+            const senderPhone = senderData.sender.replace('@c.us', '');
+            
+            let messageText = '';
+            let attachments = [];
+
+            // 1. הודעת טקסט
+            if (messageData.typeMessage === 'textMessage') {
+                messageText = messageData.textMessageData.textMessage;
+            } 
+            // 2. קובץ / תמונה / מסמך
+            else if (['fileMessage', 'imageMessage', 'documentMessage'].includes(messageData.typeMessage)) {
+                const fileData = messageData.fileMessageData;
+                messageText = fileData.caption || `[קובץ מצורף: ${fileData.fileName}]`;
+
+                if (fileData.downloadUrl) {
+                    attachments.push({
+                        filename: fileData.fileName || 'attachment',
+                        path: fileData.downloadUrl
+                    });
+                }
+            }
+
+            console.log(`הודעה מ-${senderName} (${senderPhone}): ${messageText}`);
+
+            // שליחת המייל
+            await transporter.sendMail({
+                from: `"WhatsApp Gateway" <${process.env.EMAIL_USER}>`,
+                to: process.env.TARGET_EMAIL,
+                subject: `[WhatsApp] הודעה חדשה מ-${senderName}`,
+                html: `
+                    <h3>התקבלה הודעה חדשה ב-WhatsApp</h3>
+                    <p><strong>שולח:</strong> ${senderName} (${senderPhone})</p>
+                    <p><strong>תוכן:</strong></p>
+                    <blockquote style="background: #f4f4f4; padding: 10px; border-right: 3px solid #25D366;">
+                        ${messageText || '(ללא טקסט)'}
+                    </blockquote>
+                `,
+                attachments: attachments
+            });
+        }
+
+        res.sendStatus(200);
+    } catch (error) {
+        console.error('שגיאה בעיבוד ההודעה:', error);
+        res.sendStatus(500);
+    }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
