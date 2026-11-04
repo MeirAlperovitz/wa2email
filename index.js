@@ -4,16 +4,16 @@ const nodemailer = require('nodemailer');
 const app = express();
 app.use(express.json());
 
-// הגדרת שליחת מייל דרך Gmail
+// הגדרת שליחת מייל מול Gmail בלבד (ללא הגדרת פורט ידנית שנסגר ב-Render)
 const transporter = nodemailer.createTransport({
   service: 'gmail',
-  host: 'smtp.gmail.com',
-  port: process.env.EMAIL_PORT || 587,
-  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    pass: process.env.EMAIL_PASS, // סיסמת אפליקציה בת 16 תווים
   },
+  // הגדרת timeout מקוצר כדי למנוע תקיעות
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
 });
 
 // קבלת הודעות מ-WhatsApp והעברתן ל-Gmail
@@ -41,7 +41,7 @@ app.post('/webhook', async (req, res) => {
 
       const mailOptions = {
         from: process.env.EMAIL_USER,
-        to: process.env.TARGET_EMAIL,
+        to: process.env.TARGET_EMAIL || process.env.EMAIL_USER,
         subject: `WhatsApp: ${senderName} (${senderPhone})`,
         text: `הודעה חדשה מ-WhatsApp:\n\nמאת: ${senderName}\nטלפון: ${senderPhone}\n\nתוכן ההודעה:\n${textMessage}\n\n---\nלמענה, פשוט לחץ 'השיב' במייל זה.`,
       };
