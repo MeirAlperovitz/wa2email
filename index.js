@@ -30,20 +30,26 @@ app.post('/webhook', async (req, res) => {
 
       console.log(`הודעה מ-${senderName} (${senderPhone}): ${textMessage}`);
 
-      // שליחה דרך HTTP API (אין חסימת פורטים)
-      const data = await resend.emails.send({
-        from: 'WhatsApp Bridge <onboarding@resend.dev>',
-        to: [process.env.TARGET_EMAIL || process.env.EMAIL_USER],
+      const targetEmail = process.env.TARGET_EMAIL || process.env.EMAIL_USER;
+
+      // שליחה דרך HTTP API עם טיפול מפורט בשגיאות
+      const response = await resend.emails.send({
+        from: 'Onboarding <onboarding@resend.dev>',
+        to: [targetEmail],
         subject: `WhatsApp: ${senderName} (${senderPhone})`,
         text: `הודעה חדשה מ-WhatsApp:\n\nמאת: ${senderName}\nטלפון: ${senderPhone}\n\nתוכן ההודעה:\n${textMessage}\n\n---\nלמענה, פשוט לחץ 'השיב' במייל זה.`,
       });
 
-      console.log('המייל נשלח בהצלחה דרך Resend API!', data.id);
+      if (response.error) {
+        console.error('שגיאה מ-Resend:', response.error.message);
+      } else {
+        console.log('המייל נשלח בהצלחה! מזהה:', response.data.id);
+      }
     }
 
     res.status(200).send('OK');
   } catch (error) {
-    console.error('שגיאה בשליחת מייל:', error.message);
+    console.error('שגיאה בשרת:', error.message);
     res.status(200).send('OK');
   }
 });
