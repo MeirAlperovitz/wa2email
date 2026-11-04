@@ -4,14 +4,18 @@ const nodemailer = require('nodemailer');
 const app = express();
 app.use(express.json());
 
-// הגדרת שליחת מייל מול Gmail בלבד (ללא הגדרת פורט ידנית שנסגר ב-Render)
+// הגדרת שליחת מייל בפורט 587 הנתמך ב-Render
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // חייב להיות false עבור פורט 587
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // סיסמת אפליקציה בת 16 תווים
+    pass: process.env.EMAIL_PASS, // סיסמת אפליקציה בת 16 אותיות ללא רווחים
   },
-  // הגדרת timeout מקוצר כדי למנוע תקיעות
+  tls: {
+    rejectUnauthorized: false
+  },
   connectionTimeout: 10000,
   greetingTimeout: 10000,
 });
