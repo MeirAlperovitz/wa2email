@@ -4,11 +4,12 @@ const nodemailer = require('nodemailer');
 const app = express();
 app.use(express.json());
 
-// הגדרת שליחת מייל בפורט 587 הנתמך ב-Render
+// הגדרת שליחת מייל בפורט 587 עם אכיפת IPv4
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
-  secure: false, // חייב להיות false עבור פורט 587
+  secure: false,
+  family: 4, // מחייב חיבור IPv4 בלבד כדי למנוע ENETUNREACH ב-Render
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS, // סיסמת אפליקציה בת 16 אותיות ללא רווחים
